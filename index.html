@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CrossGrid</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>CrossGrid</h1>
+  </header>
+
+  <main>
+    <section id="menu">
+      <label>Modo:
+        <select id="modeSelect">
+          <option value="pvp">Humano vs Humano</option>
+          <option value="pvc">Humano vs Computador</option>
+        </select>
+      </label>
+      <label>Dificuldade:
+        <select id="difficultySelect">
+          <option value="easy">Fácil</option>
+          <option value="medium">Intermediário</option>
+          <option value="hard">Avançado</option>
+        </select>
+      </label>
+      <button id="startBtn">Iniciar Jogo</button>
+    </section>
+
+    <section id="gameArea">
+      <svg id="board" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid meet"></svg>
+      <aside id="hud">
+        <div id="status">Pronto</div>
+        <div id="moves">Movimentos: 0</div>
+        <div id="turn">Turno: -</div>
+        <div id="timer" class="hidden">Tempo: <span id="timeLeft">--</span>s</div>
+      </aside>
+    </section>
+
+    <section id="adSection">
+      <div id="ad">Espaço para propaganda</div>
+      <small>Para integrar anúncios reais, adicione o código do provedor (ex: Google AdSense) aqui.</small>
+    </section>
+  </main>
+
+  <footer>
+    <small>CrossGrid — Jogo de grade competitivo</small>
+  </footer>
+
+  <!-- Victory modal -->
+  <div id="victoryModal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <h2 id="modalWinner">Vencedor</h2>
+      <p id="modalMessage">Jogador X venceu a partida.</p>
+      <div class="modal-actions">
+        <button id="restartBtn">Reiniciar</button>
+        <button id="closeModalBtn">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
