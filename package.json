@@ -1,0 +1,12 @@
+{
+  "name": "crossgrid",
+  "version": "1.0.0",
+  "description": "CrossGrid browser game",
+  "private": true,
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

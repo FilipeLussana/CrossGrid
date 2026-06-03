@@ -16,7 +16,8 @@ let state = {
   selectedPiece: null,
   timerId: null,
   timeLimit: 0
-  ,blockedNodes: {} // nodeId -> {turns:number, by: 'A'|'B'}
+  ,blockedNodes: {}, // nodeId -> {turns:number, by: 'A'|'B'}
+  captureEffects: []
 };
 
 function setupMenu(){
@@ -30,6 +31,7 @@ function setupMenu(){
 function startGame(){
   clearBoard();
   state.blockedNodes = {};
+  state.captureEffects = [];
   buildNodes();
   drawBoard();
   placePieces();
@@ -111,16 +113,75 @@ function placePieces(){
   renderPieces();
 }
 
+function getPieceAt(nodeId, pieces = state.pieces){
+  return pieces.find(p=>p.node===nodeId);
+}
+
+function isNodeBlockedFor(nodeId, player, blockedNodes = state.blockedNodes){
+  const blocked = blockedNodes[nodeId];
+  return Boolean(blocked && blocked.by !== player);
+}
+
+function canMoveTo(piece, nodeId, pieces = state.pieces, blockedNodes = state.blockedNodes, difficulty = state.difficulty){
+  if(!piece) return false;
+  if(!state.nodes[piece.node].neighbors.includes(nodeId)) return false;
+  if(isNodeBlockedFor(nodeId, piece.player, blockedNodes)) return false;
+  const occ = getPieceAt(nodeId, pieces);
+  if(!occ) return true;
+  if(occ.player===piece.player) return false;
+  return difficulty==='hard';
+}
+
+function getValidMoves(piece, pieces = state.pieces, blockedNodes = state.blockedNodes, difficulty = state.difficulty){
+  if(!piece) return [];
+  return state.nodes[piece.node].neighbors.filter(nodeId=>canMoveTo(piece, nodeId, pieces, blockedNodes, difficulty));
+}
+
+function markCapture(nodeId){
+  state.captureEffects.push(nodeId);
+  setTimeout(()=>{
+    state.captureEffects = state.captureEffects.filter(id=>id!==nodeId);
+    renderPieces();
+  }, 450);
+}
+
+function movePiece(piece, nodeId){
+  const from = piece.node;
+  const occ = getPieceAt(nodeId);
+  if(occ && occ.player!==piece.player && state.difficulty==='hard'){
+    state.pieces = state.pieces.filter(p=>p.id!==occ.id);
+    markCapture(nodeId);
+  }
+  if(state.difficulty==='medium'){
+    state.blockedNodes[from] = {turns:2, by: piece.player};
+  }
+  piece.node = nodeId;
+}
+
 function renderPieces(){
   // remove existing pieces
-  const old = svg.querySelectorAll('.piece');
+  const old = svg.querySelectorAll('.piece,.capture-effect');
   old.forEach(o=>o.remove());
+  svg.querySelectorAll('.intersection').forEach(el=>{
+    const nodeId = Number(el.dataset.id);
+    el.classList.toggle('blocked', Boolean(state.blockedNodes[nodeId]));
+    el.classList.remove('available');
+  });
+  state.captureEffects.forEach(nodeId=>{
+    const n = state.nodes[nodeId];
+    if(!n) return;
+    const effect = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    effect.setAttribute('cx',n.x); effect.setAttribute('cy',n.y); effect.setAttribute('r',18);
+    effect.classList.add('capture-effect','captured');
+    svg.appendChild(effect);
+  });
   state.pieces.forEach(p=>{
     const n = state.nodes[p.node];
     const circle = document.createElementNS('http://www.w3.org/2000/svg','circle');
     circle.setAttribute('cx',n.x); circle.setAttribute('cy',n.y); circle.setAttribute('r',12);
     circle.classList.add('piece');
     circle.classList.add(p.player==='A'?'playerA':'playerB');
+    if(state.selectedPiece && state.selectedPiece.id===p.id) circle.classList.add('selected');
     circle.dataset.pid = p.id;
     circle.addEventListener('click',(e)=>{ e.stopPropagation(); onPieceClick(p.id); });
     svg.appendChild(circle);
@@ -137,37 +198,8 @@ function onPieceClick(pid){
 
 function onNodeClick(nodeId){
   if(!state.selectedPiece) return;
-  const from = state.selectedPiece.node;
-  const valid = state.nodes[from].neighbors;
-  if(!valid.includes(nodeId)) return;
-  // check occupancy and rules
-  const occ = state.pieces.find(p=>p.node===nodeId);
-  // blocked nodes (medium difficulty): a recently vacated node can block opponent
-  const blocked = state.blockedNodes[nodeId];
-  if(blocked){
-    // block applies only to opponent
-    if(blocked.by !== state.selectedPiece.player) return;
-  }
-  if(occ && occ.player===state.selectedPiece.player) return; // blocked by own piece
-
-  // Advanced: capture on same node
-  if(occ && state.difficulty==='hard' && occ.player!==state.selectedPiece.player){
-    // capture
-    state.pieces = state.pieces.filter(p=>p.id!==occ.id);
-  } else if(occ){
-    // blocked unless easy (easy allows passing? we disallow moving into occupied except capture on hard)
-    if(state.difficulty!=='easy') return;
-    // easy: allow stacking? we'll disallow stacking as simpler
-    return;
-  }
-
-  // move
-  // set temporary block on the source node for opponent (medium)
-  if(state.difficulty==='medium'){
-    state.blockedNodes[from] = {turns:2, by: state.selectedPiece.player};
-  }
-
-  state.selectedPiece.node = nodeId;
+  if(!canMoveTo(state.selectedPiece, nodeId)) return;
+  movePiece(state.selectedPiece, nodeId);
   state.selectedPiece = null;
   state.moveCount++;
   state.turn = state.turn==='A'?'B':'A';
@@ -185,22 +217,22 @@ function decrementBlockedNodes(){
     v.turns = v.turns-1;
     if(v.turns<=0) delete state.blockedNodes[k];
   });
+  renderBlockedNodes();
+}
+
+function renderBlockedNodes(){
+  svg.querySelectorAll('.intersection').forEach(el=>{
+    const nodeId = Number(el.dataset.id);
+    el.classList.toggle('blocked', Boolean(state.blockedNodes[nodeId]));
+  });
 }
 
 function highlightAvailableMoves(piece){
   // clear
   svg.querySelectorAll('.intersection').forEach(el=>el.classList.remove('available'));
-  const from = piece.node;
-  const valid = state.nodes[from].neighbors;
-  valid.forEach(id=>{
+  getValidMoves(piece).forEach(id=>{
     const el = svg.querySelector(`.intersection[data-id='${id}']`);
     if(!el) return;
-    // block depending on difficulty
-    const occ = state.pieces.find(p=>p.node===id);
-    if(occ && occ.player!==piece.player && state.difficulty!=='hard'){
-      // blocked on medium
-      if(state.difficulty==='medium') return;
-    }
     el.classList.add('available');
   });
 }
@@ -216,8 +248,10 @@ function checkVictory(){
   const cols=7, rows=5;
   const topRowIdxs = [...Array(cols).keys()].map(c=>c);
   const bottomRowIdxs = [...Array(cols).keys()].map(c=> (rows-1)*cols + c );
-  const aWin = state.pieces.filter(p=>p.player==='A').every(p=> bottomRowIdxs.includes(p.node));
-  const bWin = state.pieces.filter(p=>p.player==='B').every(p=> topRowIdxs.includes(p.node));
+  const aPieces = state.pieces.filter(p=>p.player==='A');
+  const bPieces = state.pieces.filter(p=>p.player==='B');
+  const aWin = bPieces.length===0 || (aPieces.length>0 && aPieces.every(p=> bottomRowIdxs.includes(p.node)));
+  const bWin = aPieces.length===0 || (bPieces.length>0 && bPieces.every(p=> topRowIdxs.includes(p.node)));
   if(aWin || bWin){
     const winner = aWin? 'Jogador A' : 'Jogador B';
     state.turn = '-';
@@ -254,95 +288,218 @@ document.addEventListener('DOMContentLoaded', ()=>{
   if(cb) cb.addEventListener('click', ()=> hideVictory());
 });
 
-/* Simple AI: choose shortest-first move towards opponent base (B tries to reach top) */
-function runAI(){
-  if(state.turn!=='B') return;
-  const difficulty = state.difficulty;
-  // build BFS per piece to nearest target
-  const cols=7;
-  const targets = [...Array(cols).keys()].map(c=> c );
+function cloneBlockedNodes(blockedNodes){
+  const copy = {};
+  Object.keys(blockedNodes).forEach(id=>{
+    copy[id] = {...blockedNodes[id]};
+  });
+  return copy;
+}
 
-  // A* pathfinding returning path array or null
-  function aStar(start, goals, avoidOccupied=true){
-    const open = new Set([start]);
-    const cameFrom = {};
-    const gScore = {}; const fScore = {};
-    state.nodes.forEach(n=>{ gScore[n.id]=Infinity; fScore[n.id]=Infinity; });
-    gScore[start]=0;
-    const heuristic = (a,b)=>{
-      const na=state.nodes[a], nb=state.nodes[b];
-      const dx=na.x-nb.x, dy=na.y-nb.y; return Math.hypot(dx,dy);
-    };
-    // pick nearest goal as heuristic target
-    const goalSet = new Set(goals);
-    fScore[start] = Math.min(...goals.map(g=>heuristic(start,g)));
-    const occNodes = state.pieces.map(p=>p.node).filter(n=> n!==start);
+function goalRowFor(player){
+  return player==='B' ? 0 : 4;
+}
 
-    while(open.size){
-      // node in open with lowest fScore
-      let current=null; let best=Infinity;
-      open.forEach(nid=>{ if(fScore[nid]<best){best=fScore[nid]; current=nid;} });
-      if(current===null) break;
-      if(goalSet.has(current)){
-        // reconstruct path
-        const path=[]; let cur=current; while(cur!==undefined){ path.unshift(cur); cur=cameFrom[cur]; if(cur===null) break; }
-        return path;
+function rowFromNode(nodeId){
+  return Math.floor(nodeId / 7);
+}
+
+function forwardProgress(player, nodeId){
+  return player==='B' ? 4 - rowFromNode(nodeId) : rowFromNode(nodeId);
+}
+
+function nodeDistance(a,b){
+  const na=state.nodes[a], nb=state.nodes[b];
+  const dx=na.x-nb.x, dy=na.y-nb.y;
+  return Math.hypot(dx,dy);
+}
+
+function aStar(start, goals, player, pieces = state.pieces, blockedNodes = state.blockedNodes, difficulty = state.difficulty){
+  const open = new Set([start]);
+  const cameFrom = {};
+  const gScore = {}; const fScore = {};
+  const movingPiece = {id:-1,node:start,player};
+  const goalSet = new Set(goals);
+  state.nodes.forEach(n=>{ gScore[n.id]=Infinity; fScore[n.id]=Infinity; });
+  gScore[start]=0;
+  fScore[start] = Math.min(...goals.map(g=>nodeDistance(start,g)));
+
+  while(open.size){
+    let current=null; let best=Infinity;
+    open.forEach(nid=>{ if(fScore[nid]<best){best=fScore[nid]; current=nid;} });
+    if(current===null) break;
+    if(goalSet.has(current)){
+      const path=[];
+      let cur=current;
+      while(cur!==undefined){
+        path.unshift(cur);
+        cur=cameFrom[cur];
       }
-      open.delete(current);
-      for(const neigh of state.nodes[current].neighbors){
-        // skip occupied
-        if(avoidOccupied && occNodes.includes(neigh)) continue;
-        // skip blocked nodes for AI (blocked by opponent)
-        const blocked = state.blockedNodes[neigh];
-        if(blocked && blocked.by!=='B') continue;
-        const tentative = gScore[current] + heuristic(current,neigh);
-        if(tentative < gScore[neigh]){
-          cameFrom[neigh]=current; gScore[neigh]=tentative;
-          fScore[neigh]=tentative + Math.min(...goals.map(g=>heuristic(neigh,g)));
-          open.add(neigh);
-        }
+      return path;
+    }
+    open.delete(current);
+    for(const neigh of state.nodes[current].neighbors){
+      movingPiece.node = current;
+      if(!canMoveTo(movingPiece, neigh, pieces, blockedNodes, difficulty)) continue;
+      const tentative = gScore[current] + nodeDistance(current,neigh);
+      if(tentative < gScore[neigh]){
+        cameFrom[neigh]=current;
+        gScore[neigh]=tentative;
+        fScore[neigh]=tentative + Math.min(...goals.map(g=>nodeDistance(neigh,g)));
+        open.add(neigh);
       }
     }
-    return null;
   }
+  return null;
+}
 
-  // choose best piece by shortest path length
-  let candidate = null;
-  let bestLen = Infinity;
-  for(const p of state.pieces.filter(x=>x.player==='B')){
-    const path = aStar(p.node, targets, state.difficulty!=='easy');
-    if(path && path.length < bestLen){ bestLen = path.length; candidate = {piece:p,path}; }
+function getAllMoves(player, pieces = state.pieces, blockedNodes = state.blockedNodes, difficulty = state.difficulty){
+  return pieces
+    .filter(p=>p.player===player)
+    .flatMap(p=>getValidMoves(p, pieces, blockedNodes, difficulty).map(nodeId=>({pieceId:p.id,nodeId})));
+}
+
+function simulateMove(pieceId, nodeId, boardState = state){
+  const pieces = boardState.pieces.map(p=>({...p}));
+  const blockedNodes = cloneBlockedNodes(boardState.blockedNodes || {});
+  const piece = pieces.find(p=>p.id===pieceId);
+  if(!piece || !canMoveTo(piece, nodeId, pieces, blockedNodes, boardState.difficulty || state.difficulty)) return null;
+  const occ = pieces.find(p=>p.node===nodeId);
+  const from = piece.node;
+  let nextPieces = pieces;
+  if(occ && occ.player!==piece.player && (boardState.difficulty || state.difficulty)==='hard'){
+    nextPieces = pieces.filter(p=>p.id!==occ.id);
   }
-  if(!candidate){
-    // fallback: random move
-    const p = state.pieces.find(x=>x.player==='B');
-    const choices = state.nodes[p.node].neighbors.filter(n=> !state.pieces.some(pp=>pp.node===n) && !(state.blockedNodes[n] && state.blockedNodes[n].by!=='B'));
-    if(choices.length){ p.node = choices[Math.floor(Math.random()*choices.length)]; state.moveCount++; }
-    state.turn='A'; renderPieces(); updateHUD(); checkVictory(); startTurnTimer();
+  const movedPiece = nextPieces.find(p=>p.id===pieceId);
+  movedPiece.node = nodeId;
+  if((boardState.difficulty || state.difficulty)==='medium'){
+    blockedNodes[from] = {turns:2, by: piece.player};
+  }
+  return {
+    ...boardState,
+    pieces: nextPieces,
+    blockedNodes,
+    turn: piece.player==='A' ? 'B' : 'A'
+  };
+}
+
+function isThreatened(piece, pieces, blockedNodes, difficulty){
+  const opponent = piece.player==='A' ? 'B' : 'A';
+  return pieces.some(p=>{
+    if(p.player!==opponent) return false;
+    const dangerMoves = getValidMoves(p, pieces, blockedNodes, difficulty);
+    return dangerMoves.includes(piece.node);
+  });
+}
+
+function evaluateBoard(boardState, aiPlayer = 'B'){
+  const pieces = boardState.pieces;
+  const blockedNodes = boardState.blockedNodes || {};
+  const difficulty = boardState.difficulty || state.difficulty;
+  const opponent = aiPlayer==='A' ? 'B' : 'A';
+  let score = 0;
+
+  // Heuristic: material, distance to target row, and immediate capture safety.
+  pieces.forEach(p=>{
+    const side = p.player===aiPlayer ? 1 : -1;
+    score += side * 40;
+    score += side * forwardProgress(p.player, p.node) * 8;
+    if(rowFromNode(p.node)===goalRowFor(p.player)) score += side * 20;
+    if(isThreatened(p, pieces, blockedNodes, difficulty)) score -= side * 10;
+  });
+
+  score += getAllMoves(aiPlayer, pieces, blockedNodes, difficulty).length * 2;
+  score -= getAllMoves(opponent, pieces, blockedNodes, difficulty).length;
+  return score;
+}
+
+function chooseEasyMove(){
+  const moves = getAllMoves('B');
+  if(!moves.length) return null;
+  const weighted = [];
+  moves.forEach(move=>{
+    const piece = state.pieces.find(p=>p.id===move.pieceId);
+    const gain = forwardProgress('B', move.nodeId) - forwardProgress('B', piece.node);
+    const copies = gain > 0 ? 3 : 1;
+    for(let i=0;i<copies;i++) weighted.push(move);
+  });
+  return weighted[Math.floor(Math.random()*weighted.length)];
+}
+
+function chooseMediumMove(){
+  const targets = [...Array(7).keys()];
+  let bestMove = null;
+  let bestScore = -Infinity;
+  state.pieces.filter(p=>p.player==='B').forEach(piece=>{
+    const path = aStar(piece.node, targets, 'B');
+    const moves = path && path.length>1 ? [path[1]] : getValidMoves(piece);
+    moves.forEach(nodeId=>{
+      const simulated = simulateMove(piece.id, nodeId);
+      if(!simulated) return;
+      const moved = simulated.pieces.find(p=>p.id===piece.id);
+      const safety = isThreatened(moved, simulated.pieces, simulated.blockedNodes, 'hard') ? -25 : 0;
+      const score = evaluateBoard(simulated, 'B') + safety;
+      if(score > bestScore){
+        bestScore = score;
+        bestMove = {pieceId:piece.id,nodeId};
+      }
+    });
+  });
+  return bestMove || chooseEasyMove();
+}
+
+function chooseHardMove(){
+  const moves = getAllMoves('B');
+  let bestMove = null;
+  let bestScore = -Infinity;
+  moves.forEach(move=>{
+    const first = simulateMove(move.pieceId, move.nodeId);
+    if(!first) return;
+    const replyMoves = getAllMoves('A', first.pieces, first.blockedNodes, 'hard');
+    let replyScore = evaluateBoard(first, 'B');
+    if(replyMoves.length){
+      replyScore = Math.min(...replyMoves.map(reply=>{
+        const second = simulateMove(reply.pieceId, reply.nodeId, first);
+        return second ? evaluateBoard(second, 'B') : replyScore;
+      }));
+    }
+    const captureBonus = getPieceAt(move.nodeId) && getPieceAt(move.nodeId).player==='A' ? 35 : 0;
+    const score = replyScore + captureBonus;
+    if(score > bestScore){
+      bestScore = score;
+      bestMove = move;
+    }
+  });
+  return bestMove || chooseMediumMove();
+}
+
+function applyAIMove(move){
+  if(!move){
+    state.turn='A';
+    updateHUD();
+    startTurnTimer();
     return;
   }
-
-  // move one step along chosen path
-  const {piece,path} = candidate;
-  if(!path || path.length<2){ state.turn='A'; startTurnTimer(); return; }
-  const next = path[1];
-  const occ = state.pieces.find(p=>p.node===next);
-  if(occ && occ.player==='A' && state.difficulty==='hard'){
-    state.pieces = state.pieces.filter(p=>p.id!==occ.id);
-  } else if(occ){
-    // blocked
-    state.turn='A'; updateHUD(); startTurnTimer(); return;
+  const piece = state.pieces.find(p=>p.id===move.pieceId);
+  if(piece && canMoveTo(piece, move.nodeId)){
+    movePiece(piece, move.nodeId);
+    state.moveCount++;
   }
-  // apply temporary block from source if medium
-  if(state.difficulty==='medium'){
-    const from = piece.node;
-    state.blockedNodes[from] = {turns:2, by: 'B'};
-  }
-  piece.node = next;
-  state.moveCount++;
   state.turn='A';
-  renderPieces(); updateHUD(); checkVictory();
+  renderPieces();
+  updateHUD();
+  checkVictory();
   startTurnTimer();
+}
+
+function runAI(){
+  if(state.turn!=='B') return;
+  const move = state.difficulty==='hard'
+    ? chooseHardMove()
+    : state.difficulty==='medium'
+      ? chooseMediumMove()
+      : chooseEasyMove();
+  applyAIMove(move);
 }
 
 /* Turn timer (used for 'hard' difficulty) */
