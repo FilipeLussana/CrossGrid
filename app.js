@@ -48,32 +48,44 @@ function clearBoard(){
 }
 
 function buildNodes(){
-  // build a symmetric grid with central circle intersections
-  const w=800,h=600,cols=7,rows=5;
-  const marginX=80,marginY=60;
-  let id=0;
-  for(let r=0;r<rows;r++){
-    for(let c=0;c<cols;c++){
-      const x = marginX + c*( (w-2*marginX)/(cols-1) );
-      const y = marginY + r*( (h-2*marginY)/(rows-1) );
-      state.nodes.push({id:id++,x,y,neighbors:[]});
-    }
-  }
-  // connect orthogonally and diagonals to form paths
-  const getIdx=(r,c)=>r*cols+c;
-  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
-    const n = state.nodes[getIdx(r,c)];
-    const deltas=[[0,1],[1,0],[0,-1],[-1,0],[1,1],[1,-1],[-1,1],[-1,-1]];
-    deltas.forEach(d=>{
-      const nr=r+d[0], nc=c+d[1];
-      if(nr>=0&&nr<rows&&nc>=0&&nc<cols){
-        n.neighbors.push(getIdx(nr,nc));
-      }
-    });
-  }
+  // CrossGrid board: two rails connected by a central circle with crossing paths.
+  state.nodes = [
+    {id:0,label:'top-left',x:180,y:95,row:0,neighbors:[]},
+    {id:1,label:'top-center',x:400,y:95,row:0,neighbors:[]},
+    {id:2,label:'top-right',x:620,y:95,row:0,neighbors:[]},
+    {id:3,label:'circle-top',x:400,y:225,row:1,neighbors:[]},
+    {id:4,label:'circle-left',x:205,y:330,row:2,neighbors:[]},
+    {id:5,label:'circle-center',x:400,y:330,row:2,neighbors:[]},
+    {id:6,label:'circle-right',x:595,y:330,row:2,neighbors:[]},
+    {id:7,label:'circle-bottom',x:400,y:465,row:3,neighbors:[]},
+    {id:8,label:'bottom-left',x:180,y:535,row:4,neighbors:[]},
+    {id:9,label:'bottom-center',x:400,y:535,row:4,neighbors:[]},
+    {id:10,label:'bottom-right',x:620,y:535,row:4,neighbors:[]}
+  ];
+
+  [
+    [0,1],[1,2],
+    [1,3],[3,5],[5,7],[7,9],
+    [4,5],[5,6],
+    [3,4],[3,6],[4,7],[6,7],
+    [8,9],[9,10]
+  ].forEach(([a,b])=>addEdge(a,b));
+}
+
+function addEdge(a,b){
+  state.nodes[a].neighbors.push(b);
+  state.nodes[b].neighbors.push(a);
 }
 
 function drawBoard(){
+  const ring = document.createElementNS('http://www.w3.org/2000/svg','ellipse');
+  ring.setAttribute('cx',400);
+  ring.setAttribute('cy',340);
+  ring.setAttribute('rx',210);
+  ring.setAttribute('ry',150);
+  ring.classList.add('central-ring');
+  svg.appendChild(ring);
+
   // draw lines
   state.nodes.forEach(n=>{
     n.neighbors.forEach(i=>{
@@ -99,16 +111,13 @@ function drawBoard(){
 }
 
 function placePieces(){
-  // Place 5 pieces each on top and bottom rows
-  const cols=7, rows=5;
-  const topRow = 0, bottomRow = rows-1;
-  const midCols=[1,2,3,4,5];
+  // Place 3 pieces each on the top and bottom rails.
+  const topNodes = [0,1,2];
+  const bottomNodes = [8,9,10];
   let pid=0;
-  midCols.forEach((c,idx)=>{
-    const aIdx = topRow*cols + c;
-    const bIdx = bottomRow*cols + (cols-1-c);
-    state.pieces.push({id:pid++,node:aIdx,player:'A'});
-    state.pieces.push({id:pid++,node:bIdx,player:'B'});
+  topNodes.forEach((nodeId,idx)=>{
+    state.pieces.push({id:pid++,node:nodeId,player:'A'});
+    state.pieces.push({id:pid++,node:bottomNodes[bottomNodes.length-1-idx],player:'B'});
   });
   renderPieces();
 }
@@ -245,9 +254,8 @@ function updateHUD(){
 
 function checkVictory(){
   // victory when all pieces of a player reach opponent base row
-  const cols=7, rows=5;
-  const topRowIdxs = [...Array(cols).keys()].map(c=>c);
-  const bottomRowIdxs = [...Array(cols).keys()].map(c=> (rows-1)*cols + c );
+  const topRowIdxs = [0,1,2];
+  const bottomRowIdxs = [8,9,10];
   const aPieces = state.pieces.filter(p=>p.player==='A');
   const bPieces = state.pieces.filter(p=>p.player==='B');
   const aWin = bPieces.length===0 || (aPieces.length>0 && aPieces.every(p=> bottomRowIdxs.includes(p.node)));
@@ -301,7 +309,7 @@ function goalRowFor(player){
 }
 
 function rowFromNode(nodeId){
-  return Math.floor(nodeId / 7);
+  return state.nodes[nodeId].row;
 }
 
 function forwardProgress(player, nodeId){
@@ -427,7 +435,7 @@ function chooseEasyMove(){
 }
 
 function chooseMediumMove(){
-  const targets = [...Array(7).keys()];
+  const targets = [0,1,2];
   let bestMove = null;
   let bestScore = -Infinity;
   state.pieces.filter(p=>p.player==='B').forEach(piece=>{

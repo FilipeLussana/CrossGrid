@@ -17,7 +17,8 @@ footer { padding:8px 12px; text-align:center; color: var(--muted); }
 
 /* Visual highlights */
 .node { fill: transparent; stroke: rgba(255,255,255,0.06); stroke-width: 2; }
-.line { stroke: rgba(255,255,255,0.06); stroke-width: 2; }
+.central-ring { fill: transparent; stroke: rgba(230,238,246,0.18); stroke-width: 3; }
+.line { stroke: rgba(255,255,255,0.16); stroke-width: 3; stroke-linecap: round; }
 .intersection { fill:#0b1220; stroke:#2b5; stroke-width:1; cursor:pointer; }
 .intersection.available { fill: rgba(61,220,132,0.15); stroke: var(--accent); }
 .intersection.blocked { fill: rgba(255,213,79,0.18); stroke:#ffd54f; stroke-dasharray:4 3; }

@@ -21,8 +21,8 @@
   window.CrossGridSanity = {
     placement(){
       reset();
-      assert(state.pieces.filter(p=>p.player==='A').length===5, 'A deve iniciar com 5 pecas');
-      assert(state.pieces.filter(p=>p.player==='B').length===5, 'B deve iniciar com 5 pecas');
+      assert(state.pieces.filter(p=>p.player==='A').length===3, 'A deve iniciar com 3 pecas');
+      assert(state.pieces.filter(p=>p.player==='B').length===3, 'B deve iniciar com 3 pecas');
       assert(new Set(state.pieces.map(p=>p.node)).size===state.pieces.length, 'Pecas nao devem empilhar no inicio');
       return 'placement ok';
     },
@@ -64,14 +64,14 @@
     capture(){
       reset('hard');
       state.pieces = [
-        {id:0,node:10,player:'A'},
-        {id:1,node:11,player:'B'}
+        {id:0,node:5,player:'A'},
+        {id:1,node:6,player:'B'}
       ];
       const piece = state.pieces[0];
-      assert(canMoveTo(piece, 11), 'Captura adjacente deve ser valida no hard');
-      movePiece(piece, 11);
+      assert(canMoveTo(piece, 6), 'Captura adjacente deve ser valida no hard');
+      movePiece(piece, 6);
       assert(state.pieces.length===1, 'Peca capturada deve ser removida');
-      assert(state.pieces[0].player==='A' && state.pieces[0].node===11, 'Capturador deve ocupar o destino');
+      assert(state.pieces[0].player==='A' && state.pieces[0].node===6, 'Capturador deve ocupar o destino');
       return 'capture ok';
     },
 

@@ -2,7 +2,7 @@
 
 ## Inicio e posicionamento
 1. Abra `index.html` no navegador.
-2. Confirme que o tabuleiro aparece com 5 pecas do Jogador A na linha superior e 5 pecas do Jogador B na linha inferior.
+2. Confirme que o tabuleiro aparece com 3 pecas do Jogador A na linha superior e 3 pecas do Jogador B na linha inferior.
 3. Clique em `Iniciar Jogo` e confirme que o HUD mostra `Turno: Jogador A` e `Movimentos: 0`.
 
 ## Movimento e ocupacao
