@@ -54,11 +54,11 @@ function buildNodes(){
     {id:0,label:'top-left',x:180,y:95,row:0,neighbors:[]},
     {id:1,label:'top-center',x:400,y:95,row:0,neighbors:[]},
     {id:2,label:'top-right',x:620,y:95,row:0,neighbors:[]},
-    {id:3,label:'circle-top',x:400,y:225,row:1,neighbors:[]},
-    {id:4,label:'circle-left',x:205,y:330,row:2,neighbors:[]},
-    {id:5,label:'circle-center',x:400,y:330,row:2,neighbors:[]},
-    {id:6,label:'circle-right',x:595,y:330,row:2,neighbors:[]},
-    {id:7,label:'circle-bottom',x:400,y:465,row:3,neighbors:[]},
+    {id:3,label:'circle-top',x:400,y:190,row:1,neighbors:[]},
+    {id:4,label:'circle-left',x:190,y:340,row:2,neighbors:[]},
+    {id:5,label:'circle-center',x:400,y:340,row:2,neighbors:[]},
+    {id:6,label:'circle-right',x:610,y:340,row:2,neighbors:[]},
+    {id:7,label:'circle-bottom',x:400,y:490,row:3,neighbors:[]},
     {id:8,label:'bottom-left',x:180,y:535,row:4,neighbors:[]},
     {id:9,label:'bottom-center',x:400,y:535,row:4,neighbors:[]},
     {id:10,label:'bottom-right',x:620,y:535,row:4,neighbors:[]}
@@ -102,7 +102,7 @@ function drawBoard(){
   // draw nodes
   state.nodes.forEach(n=>{
     const circle = document.createElementNS('http://www.w3.org/2000/svg','circle');
-    circle.setAttribute('cx',n.x); circle.setAttribute('cy',n.y); circle.setAttribute('r',10);
+    circle.setAttribute('cx',n.x); circle.setAttribute('cy',n.y); circle.setAttribute('r',8);
     circle.classList.add('intersection');
     circle.dataset.id = n.id;
     circle.addEventListener('click',()=>onNodeClick(n.id));
@@ -187,7 +187,7 @@ function renderPieces(){
   state.pieces.forEach(p=>{
     const n = state.nodes[p.node];
     const circle = document.createElementNS('http://www.w3.org/2000/svg','circle');
-    circle.setAttribute('cx',n.x); circle.setAttribute('cy',n.y); circle.setAttribute('r',12);
+    circle.setAttribute('cx',n.x); circle.setAttribute('cy',n.y); circle.setAttribute('r',18);
     circle.classList.add('piece');
     circle.classList.add(p.player==='A'?'playerA':'playerB');
     if(state.selectedPiece && state.selectedPiece.id===p.id) circle.classList.add('selected');

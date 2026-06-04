@@ -22,8 +22,17 @@
     boardShape(){
       reset();
       const circularPaths = [[3,4],[3,6],[4,7],[6,7]];
+      const circleExtremes = [
+        [3,400,190],
+        [4,190,340],
+        [6,610,340],
+        [7,400,490]
+      ];
       assert(state.nodes.length===11, 'Tabuleiro deve ter 11 intersecoes');
       assert(state.edges.filter(edge=>edge.visible).length===10, 'Somente linhas retas devem ser desenhadas');
+      circleExtremes.forEach(([id,x,y])=>{
+        assert(state.nodes[id].x===x && state.nodes[id].y===y, 'Intersecoes devem ficar nas extremidades do circulo');
+      });
       circularPaths.forEach(([a,b])=>{
         assert(state.nodes[a].neighbors.includes(b), 'Borda circular deve permitir movimento');
         assert(state.edges.some(edge=>edge.a===a && edge.b===b && !edge.visible), 'Borda circular nao deve desenhar diagonais');

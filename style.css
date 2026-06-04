@@ -19,13 +19,14 @@ footer { padding:8px 12px; text-align:center; color: var(--muted); }
 .node { fill: transparent; stroke: rgba(255,255,255,0.06); stroke-width: 2; }
 .central-ring { fill: transparent; stroke: rgba(230,238,246,0.18); stroke-width: 3; }
 .line { stroke: rgba(255,255,255,0.16); stroke-width: 3; stroke-linecap: round; }
-.intersection { fill:#0b1220; stroke:#2b5; stroke-width:1; cursor:pointer; }
+.intersection { fill:#0b1220; stroke:#35c98a; stroke-width:2; cursor:pointer; }
 .intersection.available { fill: rgba(61,220,132,0.15); stroke: var(--accent); }
 .intersection.blocked { fill: rgba(255,213,79,0.18); stroke:#ffd54f; stroke-dasharray:4 3; }
-.piece { cursor:pointer; }
-.piece.playerA { fill: #2eb67d; }
-.piece.playerB { fill: #ff6b6b; }
-.selected { stroke:#ffd54f; stroke-width:3; }
+.piece { cursor:pointer; stroke-width:4; transition: filter 150ms ease, stroke-width 150ms ease; }
+.piece:hover { filter: brightness(1.2) drop-shadow(0 0 7px rgba(255,255,255,0.35)); }
+.piece.playerA { fill: #2eb67d; stroke:#b9ffe0; }
+.piece.playerB { fill: #ff6b6b; stroke:#ffd0d0; }
+.piece.selected { stroke:#ffd54f; stroke-width:6; filter: drop-shadow(0 0 8px rgba(255,213,79,0.7)); }
 .capture-effect { fill: rgba(255,255,255,0.12); stroke:#ffffff; stroke-width:3; pointer-events:none; animation: capturePulse 450ms ease-out forwards; }
 .captured { filter: drop-shadow(0 0 8px rgba(255,255,255,0.8)); }
 
