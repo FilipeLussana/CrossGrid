@@ -19,6 +19,18 @@
   }
 
   window.CrossGridSanity = {
+    boardShape(){
+      reset();
+      const circularPaths = [[3,4],[3,6],[4,7],[6,7]];
+      assert(state.nodes.length===11, 'Tabuleiro deve ter 11 intersecoes');
+      assert(state.edges.filter(edge=>edge.visible).length===10, 'Somente linhas retas devem ser desenhadas');
+      circularPaths.forEach(([a,b])=>{
+        assert(state.nodes[a].neighbors.includes(b), 'Borda circular deve permitir movimento');
+        assert(state.edges.some(edge=>edge.a===a && edge.b===b && !edge.visible), 'Borda circular nao deve desenhar diagonais');
+      });
+      return 'boardShape ok';
+    },
+
     placement(){
       reset();
       assert(state.pieces.filter(p=>p.player==='A').length===3, 'A deve iniciar com 3 pecas');
@@ -87,6 +99,7 @@
 
     all(){
       return [
+        this.boardShape(),
         this.placement(),
         this.movement(),
         this.noStacking(),

@@ -8,6 +8,7 @@ const timeLeftEl = document.getElementById('timeLeft');
 
 let state = {
   nodes: [], // {id,x,y,neighbors:[]}
+  edges: [], // {a,b,visible}
   pieces: [], // {id,node,player}
   turn: 'A',
   mode: 'pvp',
@@ -44,7 +45,7 @@ function startGame(){
 
 function clearBoard(){
   while(svg.firstChild) svg.removeChild(svg.firstChild);
-  state.nodes=[]; state.pieces=[]; state.selectedPiece=null;
+  state.nodes=[]; state.edges=[]; state.pieces=[]; state.selectedPiece=null;
 }
 
 function buildNodes(){
@@ -67,14 +68,17 @@ function buildNodes(){
     [0,1],[1,2],
     [1,3],[3,5],[5,7],[7,9],
     [4,5],[5,6],
-    [3,4],[3,6],[4,7],[6,7],
     [8,9],[9,10]
   ].forEach(([a,b])=>addEdge(a,b));
+
+  // These paths follow the circular border, so the ellipse represents them visually.
+  [[3,4],[3,6],[4,7],[6,7]].forEach(([a,b])=>addEdge(a,b,false));
 }
 
-function addEdge(a,b){
+function addEdge(a,b,visible=true){
   state.nodes[a].neighbors.push(b);
   state.nodes[b].neighbors.push(a);
+  state.edges.push({a,b,visible});
 }
 
 function drawBoard(){
@@ -86,18 +90,14 @@ function drawBoard(){
   ring.classList.add('central-ring');
   svg.appendChild(ring);
 
-  // draw lines
-  state.nodes.forEach(n=>{
-    n.neighbors.forEach(i=>{
-      if(i>n.id){
-        const m=state.nodes[i];
-        const line = document.createElementNS('http://www.w3.org/2000/svg','line');
-        line.setAttribute('x1',n.x); line.setAttribute('y1',n.y);
-        line.setAttribute('x2',m.x); line.setAttribute('y2',m.y);
-        line.classList.add('line');
-        svg.appendChild(line);
-      }
-    });
+  // Draw only straight paths. Circular paths are represented by the ellipse.
+  state.edges.filter(edge=>edge.visible).forEach(edge=>{
+    const a=state.nodes[edge.a], b=state.nodes[edge.b];
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',a.x); line.setAttribute('y1',a.y);
+    line.setAttribute('x2',b.x); line.setAttribute('y2',b.y);
+    line.classList.add('line');
+    svg.appendChild(line);
   });
   // draw nodes
   state.nodes.forEach(n=>{
@@ -202,6 +202,7 @@ function onPieceClick(pid){
   if(!piece) return;
   if((state.turn==='A' && piece.player!=='A') || (state.turn==='B' && piece.player!=='B')) return;
   state.selectedPiece = piece;
+  renderPieces();
   highlightAvailableMoves(piece);
 }
 
