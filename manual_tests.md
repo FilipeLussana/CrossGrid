@@ -1,37 +1,34 @@
 # CrossGrid - plano de testes manuais
 
-## Inicio e posicionamento
-1. Abra `index.html` no navegador.
-2. Confirme que o tabuleiro aparece com 3 pecas do Jogador A na linha superior e 3 pecas do Jogador B na linha inferior.
-3. Clique em `Iniciar Jogo` e confirme que o HUD mostra `Turno: Jogador A` e `Movimentos: 0`.
+## Posicionamento inicial
+1. Abra o jogo (`index.html` ou `npm start` + http://localhost:3000).
+2. Confirme que o tabuleiro mostra: 3 peças laranjas no trilho superior, 3 peças verdes no trilho inferior, círculo central com 5 nós amarelos.
+3. Confirme que o HUD mostra `Turno: Jogador 1 (laranja)` e `Movimentos: 0`.
 
-## Movimento e ocupacao
-1. Em `Facil`, selecione uma peca do Jogador A.
-2. Confirme que apenas intersecoes vizinhas validas recebem destaque.
-3. Tente mover para uma intersecao ocupada por qualquer peca.
-4. Resultado esperado: a peca nao se move e nao ocorre empilhamento.
+## Movimento básico
+1. Clique em uma peça laranja. Apenas posições vizinhas válidas devem destacar em amarelo claro.
+2. Clique em uma posição destacada. A peça deve se mover e o turno passa para Jogador 2.
+3. Tente clicar em uma posição não-vizinha. O movimento deve ser ignorado.
 
-## Bloqueio no Intermediario
-1. Selecione `Intermediario` e inicie o jogo.
-2. Mova uma peca do Jogador A para uma casa vizinha vazia.
-3. Resultado esperado: a casa de origem fica marcada visualmente como bloqueada.
-4. No turno do Jogador B, tente mover uma peca para essa casa bloqueada.
-5. Resultado esperado: o movimento e recusado.
-6. Avance os turnos ate o bloqueio expirar.
-7. Resultado esperado: a marcacao visual desaparece.
+## Bloqueio por peça
+1. Mova peças até que uma peça do Jogador 2 (verde) esteja em uma posição vizinha de uma peça laranja.
+2. Selecione a peça laranja e tente movê-la para a posição da verde.
+3. Resultado esperado: o movimento é recusado (posição não destacada). É preciso desviar pelo anel.
 
-## Captura no Avancado
-1. Selecione `Avancado` e inicie o jogo.
-2. Posicione, por movimentos validos, uma peca adjacente a uma peca adversaria.
-3. Mova a peca para a intersecao ocupada pelo adversario.
-4. Resultado esperado: a peca adversaria e removida, aparece um efeito visual de captura e o contador de movimentos aumenta em 1.
+## Vitória
+1. Em Humano vs Humano, jogue até que as 3 peças de um jogador estejam nas 3 posições iniciais do oponente.
+2. Resultado esperado: o modal de vitória aparece com o nome do vencedor, o timer para e o botão `Reiniciar` inicia uma nova partida.
+
+## Empate por bloqueio total
+1. Cenário (raro): em uma posição extrema, mova até que nenhum jogador possa fazer um movimento legal.
+2. Resultado esperado: após dois "turnos passa" consecutivos, o modal mostra "Empate".
 
 ## Humano vs Computador
-1. Selecione `Humano vs Computador`.
-2. Teste as dificuldades `Facil`, `Intermediario` e `Avancado`.
-3. Faca um movimento como Jogador A.
-4. Resultado esperado: o Jogador B responde automaticamente e o turno volta para A.
+1. Selecione `Humano vs Computador` e cada dificuldade (`Fácil`, `Intermediário`, `Avançado`).
+2. Faça um movimento como Jogador 1.
+3. Resultado esperado: o computador responde em até ~1s e o turno volta para o Jogador 1.
+4. No `Avançado`, o temporizador de 20s deve aparecer no HUD durante seu turno.
 
-## Vitoria
-1. Continue movendo as pecas de um jogador ate todas alcancarem a linha-base adversaria.
-2. Resultado esperado: o modal de vitoria aparece, o timer para e o botao `Reiniciar` inicia uma nova partida.
+## Turno passa (sem movimentos)
+1. Em Humano vs Humano, manobre suas peças para que, em algum turno, o jogador da vez não tenha movimentos válidos.
+2. Resultado esperado: o status do HUD mostra "Jogador X sem movimentos. Turno passa." e o turno passa automaticamente.

@@ -1,25 +1,37 @@
 # CrossGrid
 
-Jogo web simples implementado com HTML/CSS/JS.
+Jogo web de estratégia em turnos. Dois jogadores percorrem uma grade circular tentando alcançar o lado oposto.
 
-Como rodar:
-1. Abra `index.html` em um navegador moderno.
+## Como rodar
 
-Como rodar localmente com Node:
-1. Execute `npm start`.
-2. Abra `http://localhost:3000`.
+- Abra `index.html` em um navegador moderno, **ou**
+- Execute `npm start` e abra `http://localhost:3000`.
 
-Deploy no Railway:
-1. Envie este repositorio para o GitHub.
-2. No Railway, crie um novo projeto usando o repositorio `FilipeLussana/CrossGrid`.
+## Regras
+
+- **Tabuleiro:** dois trilhos retos (topo e base) ligados por um círculo central. O círculo tem 4 posições nas extremidades cardeais e 1 no centro, formando uma cruz.
+- **Peças:** Jogador 1 (laranja) começa nas 3 posições do trilho superior. Jogador 2 (verde) começa nas 3 posições do trilho inferior.
+- **Movimento:** em seu turno, selecione uma peça sua e mova-a para uma posição vizinha conectada (uma posição por turno).
+- **Bloqueio por oponente:** você não pode ocupar uma posição que já contenha qualquer peça (sua ou do adversário). Se o caminho mais curto estiver ocupado, contorne pelo anel.
+- **Vitória:** o primeiro jogador a colocar **todas as suas 3 peças** no trilho inicial do oponente vence.
+- **Empate:** se ambos os jogadores ficarem sem movimentos válidos consecutivamente, a partida termina empatada.
+
+## Modos e dificuldade
+
+- **Humano vs Humano:** dois jogadores alternam turnos no mesmo navegador.
+- **Humano vs Computador:** você controla o Jogador 1 (laranja); o computador controla o Jogador 2 (verde).
+- Dificuldades afetam apenas a força da IA — as regras do jogo são sempre as mesmas.
+  - **Fácil:** escolhe movimentos com viés simples para frente.
+  - **Intermediário:** usa A* para se aproximar do trilho-alvo.
+  - **Avançado:** busca de 2 jogadas com avaliação heurística. Adiciona temporizador de 20s por turno.
+
+## Deploy no Railway
+
+1. Envie o repositório para o GitHub.
+2. No Railway, crie um novo projeto a partir do repositório.
 3. O Railway detecta o `package.json` e executa `npm start`.
-4. O servidor usa automaticamente a variavel `PORT` definida pelo Railway.
+4. O servidor usa automaticamente a variável `PORT` definida pelo Railway.
 
-Recursos:
-- Dois modos: Humano vs Humano e Humano vs Computador.
-- Três níveis de dificuldade: Fácil, Intermediário, Avançado.
-- Espaço reservado para propaganda em `index.html` (div `#ad`).
+## Espaço para propaganda
 
-Para integrar anúncios reais (ex: Google AdSense):
-1. Crie conta no provedor e copie o snippet recomendado.
-2. Cole o snippet no `index.html` dentro do `div#ad` ou no `head` conforme instruções do provedor.
+O `div#ad` em `index.html` está reservado para integração de anúncios (ex: Google AdSense). Substitua o conteúdo pelo snippet do provedor.
