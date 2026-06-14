@@ -1,11 +1,13 @@
 # CrossGrid
 
-Jogo web de estratégia em turnos. Dois jogadores percorrem uma grade circular tentando alcançar o lado oposto.
+Jogo web de estratégia em turnos. Dois jogadores percorrem uma grade circular tentando alcançar o lado oposto. Interface mobile-first: layout que ocupa a tela inteira do celular, alvos de toque generosos, animação no movimento das peças e feedback por som/vibração.
 
 ## Como rodar
 
 - Abra `index.html` em um navegador moderno, **ou**
 - Execute `npm start` e abra `http://localhost:3000`.
+
+Na tela inicial escolha o modo e a dificuldade e toque em **Jogar**. Durante a partida, os botões do topo permitem reiniciar (⟳), abrir o menu (☰) e ligar/desligar o som (🔊).
 
 ## Regras
 
@@ -22,8 +24,8 @@ Jogo web de estratégia em turnos. Dois jogadores percorrem uma grade circular t
 - **Humano vs Computador:** você controla o Jogador 1 (laranja); o computador controla o Jogador 2 (verde).
 - Dificuldades afetam apenas a força da IA — as regras do jogo são sempre as mesmas.
   - **Fácil:** escolhe movimentos com viés simples para frente.
-  - **Intermediário:** usa A* para se aproximar do trilho-alvo.
-  - **Avançado:** busca de 2 jogadas com avaliação heurística. Adiciona temporizador de 20s por turno.
+  - **Médio:** usa A* para se aproximar do trilho-alvo.
+  - **Difícil:** busca de 2 jogadas com avaliação heurística. Adiciona temporizador de 20s por turno.
 
 ## Deploy no Railway
 

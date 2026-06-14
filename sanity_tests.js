@@ -14,10 +14,6 @@
     return state.pieces.find(p => p.player === player);
   }
 
-  function moveFor(piece, predicate) {
-    return getValidMoves(piece).find(predicate || (() => true));
-  }
-
   window.CrossGridSanity = {
     boardShape() {
       reset();
@@ -48,9 +44,12 @@
 
     movement() {
       reset();
-      const piece = firstPiece('A');
-      const target = moveFor(piece);
-      assert(target !== undefined, 'A deve ter pelo menos um movimento valido');
+      // No inicio, apenas a peca central do trilho alcanca o anel; as de canto
+      // ficam bloqueadas pelas aliadas. Verificamos o tabuleiro, nao uma peca fixa.
+      const moves = getAllMoves('A');
+      assert(moves.length > 0, 'A deve ter pelo menos um movimento valido');
+      const piece = state.pieces.find(p => p.id === moves[0].pieceId);
+      const target = moves[0].nodeId;
       movePiece(piece, target);
       assert(piece.node === target, 'Peca deve mover para o destino valido');
       return 'movement ok';

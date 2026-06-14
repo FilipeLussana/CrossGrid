@@ -1,14 +1,25 @@
 // CrossGrid - jogo de corrida em grade circular
 const svg = document.getElementById('board');
-const statusEl = document.getElementById('status');
 const movesEl = document.getElementById('moves');
-const turnEl = document.getElementById('turn');
 const timerEl = document.getElementById('timer');
 const timeLeftEl = document.getElementById('timeLeft');
+const toastEl = document.getElementById('toast');
+const cardA = document.getElementById('cardA');
+const cardB = document.getElementById('cardB');
+const progressA = document.getElementById('progressA');
+const progressB = document.getElementById('progressB');
+const statusA = document.getElementById('statusA');
+const statusB = document.getElementById('statusB');
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
-const CENTER = { x: 400, y: 340 };
-const RING_RADIUS = 170;
+const CENTER = { x: 300, y: 380 };
+const RING_RADIUS = 150;
+const RAIL_TOP_Y = 110;
+const RAIL_BOTTOM_Y = 650;
+const RAIL_X = [150, 300, 450];
+const PIECE_R = 30;
+const NODE_R = 11;
+const HIT_R = 28;
 const TOP_ROW = [0, 1, 2];
 const BOTTOM_ROW = [8, 9, 10];
 
@@ -28,13 +39,10 @@ let state = {
   goalDist: { A: {}, B: {} }
 };
 
-function setupMenu() {
-  document.getElementById('startBtn').addEventListener('click', () => {
-    state.mode = document.getElementById('modeSelect').value;
-    state.difficulty = document.getElementById('difficultySelect').value;
-    startGame();
-  });
-}
+let pieceEls = {};
+let toastTimer = null;
+let muted = false;
+const SETTINGS_KEY = 'crossgrid:settings';
 
 function startGame() {
   clearBoard();
@@ -46,9 +54,10 @@ function startGame() {
   placePieces();
   state.turn = 'A';
   state.moveCount = 0;
+  state.selectedPiece = null;
   updateHUD();
   startTurnTimer();
-  if (state.mode === 'pvc' && state.turn === 'B') setTimeout(runAI, 350);
+  if (state.mode === 'pvc' && state.turn === 'B') setTimeout(runAI, 420);
 }
 
 function clearBoard() {
@@ -57,6 +66,7 @@ function clearBoard() {
   state.edges = [];
   state.pieces = [];
   state.selectedPiece = null;
+  pieceEls = {};
 }
 
 function buildNodes() {
@@ -64,17 +74,17 @@ function buildNodes() {
   // Círculo central: 3 (topo), 4 (esq), 5 (centro), 6 (dir), 7 (base)
   // Trilho inferior (jogador 2, verde): nós 8,9,10
   state.nodes = [
-    { id: 0, x: 250, y: 100, row: 0, zone: 'rail', neighbors: [] },
-    { id: 1, x: 400, y: 100, row: 0, zone: 'rail', neighbors: [] },
-    { id: 2, x: 550, y: 100, row: 0, zone: 'rail', neighbors: [] },
+    { id: 0, x: RAIL_X[0], y: RAIL_TOP_Y, row: 0, zone: 'rail', neighbors: [] },
+    { id: 1, x: RAIL_X[1], y: RAIL_TOP_Y, row: 0, zone: 'rail', neighbors: [] },
+    { id: 2, x: RAIL_X[2], y: RAIL_TOP_Y, row: 0, zone: 'rail', neighbors: [] },
     { id: 3, x: CENTER.x, y: CENTER.y - RING_RADIUS, row: 1, zone: 'ring', neighbors: [] },
     { id: 4, x: CENTER.x - RING_RADIUS, y: CENTER.y, row: 2, zone: 'ring', neighbors: [] },
     { id: 5, x: CENTER.x, y: CENTER.y, row: 2, zone: 'center', neighbors: [] },
     { id: 6, x: CENTER.x + RING_RADIUS, y: CENTER.y, row: 2, zone: 'ring', neighbors: [] },
     { id: 7, x: CENTER.x, y: CENTER.y + RING_RADIUS, row: 3, zone: 'ring', neighbors: [] },
-    { id: 8, x: 250, y: 580, row: 4, zone: 'rail', neighbors: [] },
-    { id: 9, x: 400, y: 580, row: 4, zone: 'rail', neighbors: [] },
-    { id: 10, x: 550, y: 580, row: 4, zone: 'rail', neighbors: [] }
+    { id: 8, x: RAIL_X[0], y: RAIL_BOTTOM_Y, row: 4, zone: 'rail', neighbors: [] },
+    { id: 9, x: RAIL_X[1], y: RAIL_BOTTOM_Y, row: 4, zone: 'rail', neighbors: [] },
+    { id: 10, x: RAIL_X[2], y: RAIL_BOTTOM_Y, row: 4, zone: 'rail', neighbors: [] }
   ];
 
   const edges = [
@@ -109,14 +119,24 @@ function makeSVG(tag, attrs = {}) {
 }
 
 function drawBoard() {
-  const top = makeSVG('text', { x: CENTER.x, y: 40, 'text-anchor': 'middle' });
-  top.classList.add('player-label');
-  top.textContent = 'Jogador 1';
+  // Faixas de início/alvo
+  const topZone = makeSVG('rect', { x: 95, y: RAIL_TOP_Y - 34, width: 410, height: 68, rx: 34 });
+  topZone.classList.add('zone', 'zone-a');
+  svg.appendChild(topZone);
+
+  const botZone = makeSVG('rect', { x: 95, y: RAIL_BOTTOM_Y - 34, width: 410, height: 68, rx: 34 });
+  botZone.classList.add('zone', 'zone-b');
+  svg.appendChild(botZone);
+
+  // Rótulos
+  const top = makeSVG('text', { x: CENTER.x, y: 60, 'text-anchor': 'middle' });
+  top.classList.add('player-label', 'label-a');
+  top.textContent = 'JOGADOR 1';
   svg.appendChild(top);
 
-  const bottom = makeSVG('text', { x: CENTER.x, y: 645, 'text-anchor': 'middle' });
-  bottom.classList.add('player-label');
-  bottom.textContent = 'Jogador 2';
+  const bottom = makeSVG('text', { x: CENTER.x, y: 715, 'text-anchor': 'middle' });
+  bottom.classList.add('player-label', 'label-b');
+  bottom.textContent = 'JOGADOR 2';
   svg.appendChild(bottom);
 
   // Trilhos e conectores (linhas finas)
@@ -127,7 +147,10 @@ function drawBoard() {
     svg.appendChild(line);
   });
 
-  // Anel (representa as 4 arestas circulares)
+  // Anel (glow + principal)
+  const ringGlow = makeSVG('circle', { cx: CENTER.x, cy: CENTER.y, r: RING_RADIUS });
+  ringGlow.classList.add('ring-glow');
+  svg.appendChild(ringGlow);
   const ring = makeSVG('circle', { cx: CENTER.x, cy: CENTER.y, r: RING_RADIUS });
   ring.classList.add('ring');
   svg.appendChild(ring);
@@ -140,13 +163,18 @@ function drawBoard() {
     svg.appendChild(line);
   });
 
-  // Nós
+  // Nós: área de toque ampla + marcador visível
   state.nodes.forEach(n => {
-    const c = makeSVG('circle', { cx: n.x, cy: n.y, r: 12 });
-    c.classList.add('intersection', 'intersection-' + n.zone);
-    c.dataset.id = n.id;
-    c.addEventListener('click', () => onNodeClick(n.id));
-    svg.appendChild(c);
+    const hit = makeSVG('circle', { cx: n.x, cy: n.y, r: HIT_R });
+    hit.classList.add('hit');
+    hit.dataset.id = n.id;
+    hit.addEventListener('click', () => onNodeClick(n.id));
+    svg.appendChild(hit);
+
+    const dot = makeSVG('circle', { cx: n.x, cy: n.y, r: n.zone === 'rail' ? 0 : NODE_R });
+    dot.classList.add('node-dot', 'node-' + n.zone);
+    dot.dataset.id = n.id;
+    svg.appendChild(dot);
   });
 }
 
@@ -176,17 +204,43 @@ function movePiece(piece, nodeId) {
   piece.node = nodeId;
 }
 
+function isHome(piece) {
+  return targetRowFor(piece.player).includes(piece.node);
+}
+
+function countHome(player) {
+  const goals = targetRowFor(player);
+  return state.pieces.filter(p => p.player === player && goals.includes(p.node)).length;
+}
+
 function renderPieces() {
-  svg.querySelectorAll('.piece').forEach(o => o.remove());
-  svg.querySelectorAll('.intersection').forEach(el => el.classList.remove('available'));
   state.pieces.forEach(p => {
     const n = state.nodes[p.node];
-    const c = makeSVG('circle', { cx: n.x, cy: n.y, r: 24 });
-    c.classList.add('piece', 'player' + p.player);
-    if (state.selectedPiece && state.selectedPiece.id === p.id) c.classList.add('selected');
-    c.dataset.pid = p.id;
-    c.addEventListener('click', e => { e.stopPropagation(); onPieceClick(p.id); });
-    svg.appendChild(c);
+    let el = pieceEls[p.id];
+    if (!el) {
+      el = makeSVG('circle', { cx: n.x, cy: n.y, r: PIECE_R });
+      el.classList.add('piece', 'player' + p.player);
+      el.dataset.pid = p.id;
+      el.addEventListener('click', e => { e.stopPropagation(); onPieceClick(p.id); });
+      svg.appendChild(el);
+      pieceEls[p.id] = el;
+    }
+    el.setAttribute('cx', n.x);
+    el.setAttribute('cy', n.y);
+    el.classList.toggle('selected', !!(state.selectedPiece && state.selectedPiece.id === p.id));
+    el.classList.toggle('home', isHome(p));
+  });
+}
+
+function clearAvailable() {
+  svg.querySelectorAll('.node-dot.available').forEach(el => el.classList.remove('available'));
+}
+
+function highlightAvailableMoves(piece) {
+  clearAvailable();
+  getValidMoves(piece).forEach(id => {
+    const el = svg.querySelector(`.node-dot[data-id='${id}']`);
+    if (el) el.classList.add('available');
   });
 }
 
@@ -196,7 +250,15 @@ function onPieceClick(pid) {
   if (!piece) return;
   if (state.mode === 'pvc' && piece.player === 'B') return;
   if (piece.player !== state.turn) return;
+  if (state.selectedPiece && state.selectedPiece.id === pid) {
+    state.selectedPiece = null;
+    clearAvailable();
+    renderPieces();
+    return;
+  }
   state.selectedPiece = piece;
+  sfxSelect();
+  buzz(8);
   renderPieces();
   highlightAvailableMoves(piece);
 }
@@ -210,29 +272,40 @@ function onNodeClick(nodeId) {
   state.moveCount++;
   state.passedLastTurn = false;
   state.turn = state.turn === 'A' ? 'B' : 'A';
+  clearAvailable();
   renderPieces();
   updateHUD();
+  sfxMove();
+  buzz(12);
   clearTurnTimer();
   if (checkVictory()) return;
   if (handleNoMoves()) return;
   startTurnTimer();
-  if (state.mode === 'pvc' && state.turn === 'B') setTimeout(runAI, 350);
-}
-
-function highlightAvailableMoves(piece) {
-  svg.querySelectorAll('.intersection').forEach(el => el.classList.remove('available'));
-  getValidMoves(piece).forEach(id => {
-    const el = svg.querySelector(`.intersection[data-id='${id}']`);
-    if (el) el.classList.add('available');
-  });
+  if (state.mode === 'pvc' && state.turn === 'B') setTimeout(runAI, 420);
 }
 
 function updateHUD() {
-  statusEl.textContent = `Dificuldade: ${state.difficulty} • Modo: ${state.mode}`;
-  movesEl.textContent = `Movimentos: ${state.moveCount}`;
-  const label = state.turn === 'A' ? 'Jogador 1 (laranja)'
-    : state.turn === 'B' ? 'Jogador 2 (verde)' : '-';
-  turnEl.textContent = `Turno: ${label}`;
+  movesEl.textContent = state.moveCount;
+  updateProgress('A');
+  updateProgress('B');
+  cardA.classList.toggle('active', state.turn === 'A' && !state.gameOver);
+  cardB.classList.toggle('active', state.turn === 'B' && !state.gameOver);
+  setCardStatus('A');
+  setCardStatus('B');
+}
+
+function updateProgress(player) {
+  const el = player === 'A' ? progressA : progressB;
+  if (!el) return;
+  const n = countHome(player);
+  [...el.children].forEach((dot, i) => dot.classList.toggle('filled', i < n));
+}
+
+function setCardStatus(player) {
+  const el = player === 'A' ? statusA : statusB;
+  if (!el) return;
+  if (state.gameOver || state.turn !== player) { el.textContent = ''; return; }
+  el.textContent = (state.mode === 'pvc' && player === 'B') ? 'pensando…' : 'sua vez';
 }
 
 function checkVictory() {
@@ -245,7 +318,10 @@ function checkVictory() {
     state.turn = '-';
     clearTurnTimer();
     updateHUD();
-    showVictory((aWin ? 'Jogador 1' : 'Jogador 2') + ' venceu!');
+    const who = aWin ? 'Jogador 1' : 'Jogador 2';
+    showVictory(who + ' levou todas as peças ao destino.', who);
+    sfxWin();
+    buzz([40, 50, 90]);
     return true;
   }
   return false;
@@ -258,21 +334,23 @@ function handleNoMoves() {
     state.turn = '-';
     clearTurnTimer();
     updateHUD();
-    showVictory('Empate: nenhum jogador pode se mover.');
+    showVictory('Ninguém conseguiu se mover.');
     return true;
   }
   const who = state.turn === 'A' ? 'Jogador 1' : 'Jogador 2';
-  statusEl.textContent = `${who} sem movimentos. Turno passa.`;
+  showToast(`${who} sem movimentos — passa a vez.`);
   state.passedLastTurn = true;
   state.turn = state.turn === 'A' ? 'B' : 'A';
   updateHUD();
   startTurnTimer();
-  if (state.mode === 'pvc' && state.turn === 'B') setTimeout(runAI, 350);
+  if (state.mode === 'pvc' && state.turn === 'B') setTimeout(runAI, 420);
   return true;
 }
 
-function showVictory(message) {
-  document.getElementById('modalWinner').textContent = 'Fim de jogo';
+function showVictory(message, winner) {
+  const icon = document.getElementById('victoryIcon');
+  if (icon) icon.textContent = winner ? '🏆' : '🤝';
+  document.getElementById('modalWinner').textContent = winner ? `${winner} venceu! 🎉` : 'Empate';
   document.getElementById('modalMessage').textContent = message;
   document.getElementById('victoryModal').classList.remove('hidden');
 }
@@ -281,17 +359,51 @@ function hideVictory() {
   document.getElementById('victoryModal').classList.add('hidden');
 }
 
-function restartGame() {
-  hideVictory();
-  startGame();
+// ---------- Toast ----------
+
+function showToast(msg, ms = 1900) {
+  if (!toastEl) return;
+  toastEl.textContent = msg;
+  toastEl.classList.remove('hidden');
+  // força reflow para reiniciar a transição
+  void toastEl.offsetWidth;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toastEl.classList.remove('show');
+    setTimeout(() => toastEl.classList.add('hidden'), 260);
+  }, ms);
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  const rb = document.getElementById('restartBtn');
-  const cb = document.getElementById('closeModalBtn');
-  if (rb) rb.addEventListener('click', restartGame);
-  if (cb) cb.addEventListener('click', hideVictory);
-});
+// ---------- Som e vibração ----------
+
+let audioCtx = null;
+
+function beep(freq, dur, type = 'sine', gain = 0.04) {
+  if (muted) return;
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = type;
+    o.frequency.value = freq;
+    o.connect(g);
+    g.connect(audioCtx.destination);
+    const t = audioCtx.currentTime;
+    g.gain.setValueAtTime(gain, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.start(t);
+    o.stop(t + dur);
+  } catch (e) { /* áudio indisponível */ }
+}
+
+function sfxSelect() { beep(620, 0.05, 'sine', 0.03); }
+function sfxMove() { beep(440, 0.09, 'triangle', 0.045); }
+function sfxWin() { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => beep(f, 0.26, 'sine', 0.05), i * 120)); }
+
+function buzz(pattern) {
+  try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (e) { /* sem suporte */ }
+}
 
 // ---------- IA ----------
 
@@ -484,6 +596,7 @@ function applyAIMove(move) {
   state.turn = 'A';
   renderPieces();
   updateHUD();
+  sfxMove();
   clearTurnTimer();
   if (checkVictory()) return;
   if (handleNoMoves()) return;
@@ -499,7 +612,7 @@ function runAI() {
   applyAIMove(move);
 }
 
-// ---------- Timer (Avançado) ----------
+// ---------- Timer (Difícil) ----------
 
 function startTurnTimer() {
   clearTurnTimer();
@@ -525,7 +638,7 @@ function clearTurnTimer() {
 
 function onTurnTimeout() {
   if (state.gameOver) return;
-  statusEl.textContent = 'Tempo esgotado! Turno passa.';
+  showToast('Tempo esgotado! Passa a vez.');
   if (state.mode === 'pvc' && state.turn === 'B') {
     setTimeout(runAI, 200);
     return;
@@ -533,13 +646,104 @@ function onTurnTimeout() {
   state.turn = state.turn === 'A' ? 'B' : 'A';
   state.selectedPiece = null;
   state.passedLastTurn = false;
+  clearAvailable();
   renderPieces();
   updateHUD();
   if (checkVictory()) return;
   if (handleNoMoves()) return;
   startTurnTimer();
-  if (state.mode === 'pvc' && state.turn === 'B') setTimeout(runAI, 350);
+  if (state.mode === 'pvc' && state.turn === 'B') setTimeout(runAI, 420);
 }
 
-setupMenu();
+// ---------- UI / preferências ----------
+
+function showOverlay(id) { document.getElementById(id).classList.remove('hidden'); }
+function hideOverlay(id) { document.getElementById(id).classList.add('hidden'); }
+
+function updateDifficultyVisibility() {
+  const pvc = document.getElementById('modeSelect').value === 'pvc';
+  const field = document.getElementById('difficultyField');
+  if (field) field.style.display = pvc ? '' : 'none';
+}
+
+function updateSoundBtn() {
+  const b = document.getElementById('soundBtn');
+  if (!b) return;
+  b.textContent = muted ? '🔇' : '🔊';
+  b.classList.toggle('off', muted);
+}
+
+function toggleSound() {
+  muted = !muted;
+  updateSoundBtn();
+  saveSettings();
+  if (!muted) sfxSelect();
+}
+
+function loadSettings() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+    if (s.mode) document.getElementById('modeSelect').value = s.mode;
+    if (s.difficulty) document.getElementById('difficultySelect').value = s.difficulty;
+    muted = !!s.muted;
+  } catch (e) { /* localStorage indisponível */ }
+}
+
+function saveSettings() {
+  try {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({
+      mode: document.getElementById('modeSelect').value,
+      difficulty: document.getElementById('difficultySelect').value,
+      muted
+    }));
+  } catch (e) { /* localStorage indisponível */ }
+}
+
+function applyMenuSettings() {
+  state.mode = document.getElementById('modeSelect').value;
+  state.difficulty = document.getElementById('difficultySelect').value;
+}
+
+function setupUI() {
+  const modeSel = document.getElementById('modeSelect');
+  const diffSel = document.getElementById('difficultySelect');
+
+  document.getElementById('startBtn').addEventListener('click', () => {
+    applyMenuSettings();
+    saveSettings();
+    hideOverlay('startScreen');
+    startGame();
+  });
+  modeSel.addEventListener('change', () => { updateDifficultyVisibility(); saveSettings(); });
+  diffSel.addEventListener('change', saveSettings);
+
+  document.getElementById('newGameBtn').addEventListener('click', () => { applyMenuSettings(); startGame(); });
+  document.getElementById('menuBtn').addEventListener('click', () => showOverlay('startScreen'));
+  document.getElementById('soundBtn').addEventListener('click', toggleSound);
+
+  const howToBtn = document.getElementById('howToBtn');
+  if (howToBtn) howToBtn.addEventListener('click', () => showOverlay('howToModal'));
+  const howToClose = document.getElementById('howToCloseBtn');
+  if (howToClose) howToClose.addEventListener('click', () => hideOverlay('howToModal'));
+
+  const rb = document.getElementById('restartBtn');
+  const cb = document.getElementById('closeModalBtn');
+  if (rb) rb.addEventListener('click', () => { hideVictory(); startGame(); });
+  if (cb) cb.addEventListener('click', hideVictory);
+
+  // toque no fundo do tabuleiro desfaz a seleção
+  svg.addEventListener('click', e => {
+    if (e.target === svg && state.selectedPiece) {
+      state.selectedPiece = null;
+      clearAvailable();
+      renderPieces();
+    }
+  });
+}
+
+loadSettings();
+setupUI();
+updateDifficultyVisibility();
+updateSoundBtn();
+applyMenuSettings();
 startGame();

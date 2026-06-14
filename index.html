@@ -2,61 +2,103 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1224" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>CrossGrid</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header>
-    <h1>CrossGrid</h1>
-  </header>
+  <div id="app">
+    <header id="topbar">
+      <div class="brand"><span class="brand-mark"></span> CrossGrid</div>
+      <div class="top-actions">
+        <button id="soundBtn" class="icon-btn" aria-label="Som" title="Som">🔊</button>
+        <button id="newGameBtn" class="icon-btn" aria-label="Novo jogo" title="Novo jogo">⟳</button>
+        <button id="menuBtn" class="icon-btn" aria-label="Menu" title="Menu">☰</button>
+      </div>
+    </header>
 
-  <main>
-    <section id="menu">
-      <label>Modo:
+    <section id="scoreboard">
+      <div class="player-card" id="cardA">
+        <div class="pc-top"><span class="pc-dot"></span><span class="pc-name">Jogador 1</span></div>
+        <div class="pc-progress" id="progressA"><i></i><i></i><i></i></div>
+        <div class="pc-status" id="statusA"></div>
+      </div>
+
+      <div class="score-mid">
+        <div id="moves" class="mid-moves">0</div>
+        <div class="mid-label">jogadas</div>
+        <div id="timer" class="mid-timer hidden"><span id="timeLeft">20</span>s</div>
+      </div>
+
+      <div class="player-card" id="cardB">
+        <div class="pc-top"><span class="pc-dot"></span><span class="pc-name">Jogador 2</span></div>
+        <div class="pc-progress" id="progressB"><i></i><i></i><i></i></div>
+        <div class="pc-status" id="statusB"></div>
+      </div>
+    </section>
+
+    <main id="boardWrap">
+      <svg id="board" viewBox="0 0 600 760" preserveAspectRatio="xMidYMid meet" aria-label="Tabuleiro CrossGrid"></svg>
+      <div id="toast" class="toast hidden"></div>
+    </main>
+
+    <div id="ad" class="ad-slot">Espaço para propaganda</div>
+  </div>
+
+  <!-- Tela inicial -->
+  <div id="startScreen" class="overlay">
+    <div class="overlay-card">
+      <div class="logo-badge"></div>
+      <h1 class="title">CrossGrid</h1>
+      <p class="tagline">Corrida de estratégia em grade circular</p>
+
+      <label class="field">Modo de jogo
         <select id="modeSelect">
-          <option value="pvp">Humano vs Humano</option>
-          <option value="pvc">Humano vs Computador</option>
+          <option value="pvp">2 Jogadores</option>
+          <option value="pvc">Contra o Computador</option>
         </select>
       </label>
-      <label>Dificuldade:
+
+      <label class="field" id="difficultyField">Dificuldade
         <select id="difficultySelect">
           <option value="easy">Fácil</option>
-          <option value="medium">Intermediário</option>
-          <option value="hard">Avançado</option>
+          <option value="medium">Médio</option>
+          <option value="hard">Difícil</option>
         </select>
       </label>
-      <button id="startBtn">Iniciar Jogo</button>
-    </section>
 
-    <section id="gameArea">
-      <svg id="board" viewBox="0 0 800 680" preserveAspectRatio="xMidYMid meet"></svg>
-      <aside id="hud">
-        <div id="status">Pronto</div>
-        <div id="moves">Movimentos: 0</div>
-        <div id="turn">Turno: -</div>
-        <div id="timer" class="hidden">Tempo: <span id="timeLeft">--</span>s</div>
-      </aside>
-    </section>
+      <button id="startBtn" class="primary-btn">Jogar</button>
+      <button id="howToBtn" class="ghost-btn">Como jogar</button>
+    </div>
+  </div>
 
-    <section id="adSection">
-      <div id="ad">Espaço para propaganda</div>
-      <small>Para integrar anúncios reais, adicione o código do provedor (ex: Google AdSense) aqui.</small>
-    </section>
-  </main>
+  <!-- Como jogar -->
+  <div id="howToModal" class="overlay hidden">
+    <div class="overlay-card">
+      <h2>Como jogar</h2>
+      <ul class="rules">
+        <li>Toque em uma peça sua e depois em um destino destacado.</li>
+        <li>Mova uma casa por vez seguindo as conexões da grade.</li>
+        <li>Não dá para ocupar uma casa já ocupada — contorne pelo anel.</li>
+        <li>Leve suas <strong>3 peças</strong> até o trilho inicial do adversário para vencer.</li>
+      </ul>
+      <button id="howToCloseBtn" class="primary-btn">Entendi</button>
+    </div>
+  </div>
 
-  <footer>
-    <small>CrossGrid — Jogo de grade competitivo</small>
-  </footer>
-
-  <!-- Victory modal -->
-  <div id="victoryModal" class="modal-overlay hidden">
-    <div class="modal-content">
-      <h2 id="modalWinner">Vencedor</h2>
-      <p id="modalMessage">Jogador X venceu a partida.</p>
+  <!-- Vitória -->
+  <div id="victoryModal" class="overlay hidden">
+    <div class="overlay-card victory">
+      <div id="victoryIcon" class="victory-icon">🏆</div>
+      <h2 id="modalWinner">Fim de jogo</h2>
+      <p id="modalMessage">—</p>
       <div class="modal-actions">
-        <button id="restartBtn">Reiniciar</button>
-        <button id="closeModalBtn">Fechar</button>
+        <button id="restartBtn" class="primary-btn">Jogar de novo</button>
+        <button id="closeModalBtn" class="ghost-btn">Ver tabuleiro</button>
       </div>
     </div>
   </div>
